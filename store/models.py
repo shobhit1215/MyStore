@@ -7,6 +7,12 @@ from django.db import models
 class Category(models.Model):
     name = models.CharField(max_length=100)
 
+
+    @staticmethod
+    def get_all_categories():
+        return Category.objects.all()
+
+
     def __str__(self):
         return self.name
 
@@ -22,6 +28,15 @@ class Product(models.Model):
         return self.name
 
     @staticmethod
-    def gel_all_products():
+    def get_all_products():
         return Product.objects.all()
+
+    @staticmethod
+    def get_products_by_id(category_id):
+        if category_id:
+
+            return Product.objects.filter(category=category_id)
+
+        else:
+            return Product.get_all_products()
 
