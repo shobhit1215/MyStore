@@ -2,25 +2,83 @@ from django.shortcuts import render,redirect
 from django.http import HttpResponse
 from .models import Product,Category,Customer
 from django.contrib.auth.hashers import make_password,check_password
-
+from django.views import View
 # Create your views here.
 # print(make_password('1234'))
 # print(check_password('1234','pbkdf2_sha256$260000$13ogOr81RXXowrVUXv6SeC$xux9inZYGXShlFgK/uCWmh9rqJAVj4my7f0+fDqXc7g='))
 
-def index(request):
-    categories=Category.get_all_categories()
-    products = None
-    # print(products)
-    categoryID=request.GET.get('category')
-    if categoryID:
-        products = Product.get_products_by_id(categoryID)
-    else:
-        products = Product.get_all_products()
-    data= {}
-    data['products']=products
-    data['categories']=categories
+class Index(View):
+    def get(self,request):
+        cart=request.session.get('cart')
+        if not cart:
+            request.session['cart'] = {}
+        categories=Category.get_all_categories()
+        products = None
+        # print(products)
+        categoryID=request.GET.get('category')
+        if categoryID:
+            products = Product.get_products_by_id(categoryID)
+        else:
+            products = Product.get_all_products()
+        data= {}
+        data['products']=products
+        data['categories']=categories
+        print('you are:',request.session.get('email'))
+        
+        return render(request,'index.html',data)
+
+    def post(self,request):
+        product = request.POST.get('product')
+        remove=request.POST.get('remove')
+
+        cart=request.session.get('cart')
+        if cart:
+            quantity = cart.get(product)
+            if quantity:
+                if remove:
+                    if quantity <= 1:
+                        cart.pop(product)
+                    else:
+                        cart[product] = quantity-1
+                    
+                else:
+                    cart[product] = quantity+1
+            else:
+                cart[product] = 1
+
+            
+        else:
+            cart = {}
+            cart[product] = 1
+
+        request.session['cart'] = cart
+        print('Cart data is',request.session['cart'])
+        return redirect('homepage')
+        
+
+
+
+
+
+
+# def index(request):
+#     categories=Category.get_all_categories()
+#     products = None
+#     # print(products)
+#     categoryID=request.GET.get('category')
+#     if categoryID:
+#         products = Product.get_products_by_id(categoryID)
+#     else:
+#         products = Product.get_all_products()
+#     data= {}
+#     data['products']=products
+#     data['categories']=categories
+#     print('you are:',request.session.get('email'))
     
-    return render(request,'index.html',data)
+#     return render(request,'index.html',data)
+
+#     if request.method=='POST':
+#         print(request.POST)
 
 def validate(customer):
     error_mssg=None
@@ -87,7 +145,9 @@ def signup(request):
             return render(request,'signup.html',data)
         
 
-def login(request):
+# def login(request):
+
+
     if request.method == 'GET':
         return render(request,'login.html')
     else:
@@ -109,3 +169,29 @@ def login(request):
 
         print(customer)
         return render(request,'login.html',{'error':error_mssg})
+
+class Login(View):
+    def get(self,request):
+        return render(request,'login.html')
+    
+    def post(self,request):
+        email = request.POST.get('email')
+        password=request.POST.get('password')
+        try:
+            customer = Customer.objects.get(email=email)
+        except:
+            customer = False
+        error_mssg = None
+        if customer:
+            flag = check_password(password,customer.password)
+            if flag:
+                request.session['customer_id']=customer.id
+                request.session['email']=customer.email
+                return redirect('homepage')
+            else:
+                error_mssg = "Wrong Password Entered"
+        else:
+            error_mssg = "Email is not registered"
+
+        return render(request,'login.html',{'error':error_mssg})
+
