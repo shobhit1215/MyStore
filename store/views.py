@@ -195,3 +195,6 @@ class Login(View):
 
         return render(request,'login.html',{'error':error_mssg})
 
+def logout(request):
+    request.session.clear()
+    return redirect('login')
