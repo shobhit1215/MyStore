@@ -24,3 +24,16 @@ def cart_count(product,cart):
         if int(id) == product.id:
             return cart.get(id)
     return 0
+
+
+@register.filter(name='total')
+def total(product,cart):
+    return product.price * cart_count(product,cart)
+
+@register.filter(name='total_of_all')
+def total_of_all(products,cart):
+    sum = 0
+    for p in products:
+        sum += total(p,cart)
+    return sum
+

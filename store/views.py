@@ -198,3 +198,13 @@ class Login(View):
 def logout(request):
     request.session.clear()
     return redirect('login')
+
+def cart(request):
+    try:
+        ids=list(request.session.get('cart').keys())
+        print(ids)
+    except:
+        request.session['cart'] = {}
+        ids=list(request.session.get('cart').keys())
+    products=Product.get_products(ids)
+    return render(request,'cart.html',{'products':products,})
