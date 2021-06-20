@@ -37,3 +37,8 @@ def total_of_all(products,cart):
         sum += total(p,cart)
     return sum
 
+@register.filter(name='multiply')
+def multiply(n1,n2):
+
+    return n1 * n2
+

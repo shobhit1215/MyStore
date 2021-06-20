@@ -1,8 +1,9 @@
-from django.shortcuts import render,redirect
+from django.shortcuts import render,redirect,HttpResponseRedirect
 from django.http import HttpResponse
-from .models import Product,Category,Customer
+from .models import Product,Category,Customer,Order
 from django.contrib.auth.hashers import make_password,check_password
 from django.views import View
+from store.middlewares.auth import auth_middleware
 # Create your views here.
 # print(make_password('1234'))
 # print(check_password('1234','pbkdf2_sha256$260000$13ogOr81RXXowrVUXv6SeC$xux9inZYGXShlFgK/uCWmh9rqJAVj4my7f0+fDqXc7g='))
@@ -23,7 +24,7 @@ class Index(View):
         data= {}
         data['products']=products
         data['categories']=categories
-        print('you are:',request.session.get('email'))
+        # print('you are:',request.session.get('email'))
         
         return render(request,'index.html',data)
 
@@ -171,7 +172,9 @@ def signup(request):
         return render(request,'login.html',{'error':error_mssg})
 
 class Login(View):
+    
     def get(self,request):
+        
         return render(request,'login.html')
     
     def post(self,request):
@@ -187,6 +190,7 @@ class Login(View):
             if flag:
                 request.session['customer_id']=customer.id
                 request.session['email']=customer.email
+                
                 return redirect('homepage')
             else:
                 error_mssg = "Wrong Password Entered"
@@ -197,14 +201,46 @@ class Login(View):
 
 def logout(request):
     request.session.clear()
-    return redirect('login')
+    return redirect('homepage')
 
 def cart(request):
     try:
         ids=list(request.session.get('cart').keys())
-        print(ids)
+        # print(ids)
     except:
         request.session['cart'] = {}
         ids=list(request.session.get('cart').keys())
     products=Product.get_products(ids)
     return render(request,'cart.html',{'products':products,})
+
+def checkout(request):
+    if request.method == 'POST':
+        address = request.POST.get('address')
+        phone = request.POST.get('phone')
+        customer = request.session.get('customer_id')
+        cart = request.session.get('cart')
+        products = Product.get_products(list(cart.keys()))
+        # print(address,phone,customer,cart,products)
+
+        for product in products:
+            order = Order(customer=Customer.objects.get(id=customer),
+                          product=product,
+                          price=product.price,
+                          address=address,
+                          phone=phone,
+                          quantity=cart.get(str(product.id)))
+            order.save()
+        
+        request.session['cart'] = {}
+
+        return redirect('cart')
+
+# @auth_middleware
+def orders(request):
+    if request.method=='GET':
+        customer=request.session.get('customer_id')
+        order = Order.get_orders_by_customer(customer)
+        # print(order)
+        order.reverse()
+        return render(request,'orders.html',{'orders':order})
+
